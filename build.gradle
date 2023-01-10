@@ -1,0 +1,84 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.0.1'
+    id 'io.spring.dependency-management' version '1.1.0'
+    id 'java-library'
+    id 'maven-publish'
+    id 'groovy'
+}
+
+group = 'com.youland'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        credentials {
+            username '638eb995da874cca72ec2a17'
+            password 'PEn47V1nFfw4'
+        }
+        url 'https://packages.aliyun.com/maven/repository/2310913-release-J7HQKI/'
+    }
+}
+
+jar {
+    enabled = true
+}
+bootJar {
+    enabled = false
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives sourcesJar
+}
+
+dependencies {
+
+    implementation 'org.springframework.boot:spring-boot-starter'
+
+    // words
+    implementation 'org.apache.poi:poi-ooxml:5.2.2'
+    implementation 'org.apache.pdfbox:pdfbox:2.0.27'
+    implementation 'e-iceblue:spire.doc:10.12.2'
+    implementation 'com.luhuiguo:aspose-words:22.10'
+    implementation 'org.jsoup:jsoup:1.15.3'
+    // lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+processResources {
+    filesMatching('application.*') {
+        expand(project.properties)
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            credentials {
+                username '638eb995da874cca72ec2a17'
+                password 'PEn47V1nFfw4'
+            }
+            url 'https://packages.aliyun.com/maven/repository/2310913-release-J7HQKI/'
+        }
+    }
+}
