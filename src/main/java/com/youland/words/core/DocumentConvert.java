@@ -12,6 +12,10 @@
 */
 package com.youland.words.core;
 
+import com.aspose.words.FontSettings;
+import com.aspose.words.PageRange;
+import com.aspose.words.PageSet;
+import com.aspose.words.PdfSaveOptions;
 import com.google.common.collect.Lists;
 import com.spire.doc.Document;
 import com.spire.doc.FieldType;
@@ -49,7 +53,7 @@ public class DocumentConvert {
    * @param html word html template
    * @return ByteArrayResource
    */
-  public static ByteArrayResource generateWordByHtml(String html) {
+  public static ByteArrayResource generateWord(String html) {
 
     Document doc = new Document();
     doc.loadFromStream(new ByteArrayInputStream(html.getBytes()),
@@ -64,7 +68,7 @@ public class DocumentConvert {
    * @param htmlAndFooters word html template
    * @return ByteArrayResource
    */
-  public static ByteArrayResource generateWordByHtml(List<DocumentHtmlAndFooter> htmlAndFooters) throws Exception {
+  public static ByteArrayResource generateWord(List<DocumentHtmlAndFooter> htmlAndFooters) throws Exception {
 
     if (CollectionUtils.isEmpty(htmlAndFooters)) {
       throw new ValidationException("No documents");
@@ -145,6 +149,7 @@ public class DocumentConvert {
   }
 
   private static ByteArrayResource removeLogo(ByteArrayResource byteArrayResource) {
+
     try {
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       XWPFDocument doc = new XWPFDocument(OPCPackage.open(byteArrayResource.getInputStream()));
@@ -161,5 +166,29 @@ public class DocumentConvert {
       e.printStackTrace();
     }
     return null;
+  }
+
+  /**
+   *
+   * @param docResource word
+   * @return ByteArrayOutputStream pdf
+   */
+  public static ByteArrayOutputStream docToPdf(ByteArrayResource docResource){
+    try{
+
+      com.aspose.words.Document document = new com.aspose.words.Document(docResource.getInputStream());
+      PdfSaveOptions options = new PdfSaveOptions();
+      FontSettings fontSettings = FontSettings.getDefaultInstance();
+      fontSettings.setFontsFolder("/usr/share/fonts/",true);
+      document.setFontSettings(fontSettings);
+      PageSet pageSet = new PageSet(new PageRange(0, document.getPageCount()));
+      options.setPageSet(pageSet);
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      document.save(out, options);
+
+      return out;
+    }catch (Exception e){
+      throw new RuntimeException(e);
+    }
   }
 }
