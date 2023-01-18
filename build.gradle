@@ -54,6 +54,8 @@ dependencies {
     implementation 'e-iceblue:spire.doc:10.12.2'
     implementation 'com.luhuiguo:aspose-words:22.10'
     implementation 'org.jsoup:jsoup:1.15.3'
+    implementation 'com.google.guava:guava:31.1-jre'
+
     // lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
