@@ -5,10 +5,11 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'groovy'
+    id "publishing"
 }
 
 group = 'com.youland'
-version = '0.0.1-SNAPSHOT'
+version = '1.0.0'
 sourceCompatibility = '17'
 
 configurations {
@@ -28,22 +29,6 @@ repositories {
     }
 }
 
-jar {
-    enabled = true
-}
-bootJar {
-    enabled = false
-}
-
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
-
-artifacts {
-    archives sourcesJar
-}
-
 dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter'
@@ -53,6 +38,7 @@ dependencies {
     implementation 'org.apache.pdfbox:pdfbox:2.0.27'
     implementation 'e-iceblue:spire.doc:10.12.2'
     implementation 'com.luhuiguo:aspose-words:22.10'
+    implementation "org.xhtmlrenderer:flying-saucer-pdf-itext5:9.1.22"
     implementation 'org.jsoup:jsoup:1.15.3'
     implementation 'com.google.guava:guava:31.1-jre'
 
@@ -61,6 +47,25 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+jar {
+    enabled = true
+}
+bootJar {
+    enabled = false
+}
+
+task sourceJar(type: Jar) {
+    archiveClassifier = "sources"
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
 }
 
 tasks.named('test') {
@@ -74,13 +79,18 @@ processResources {
 }
 
 publishing {
+    publications {
+        library(MavenPublication) {
+            from components.java
+        }
+    }
     repositories {
         maven {
-            credentials {
-                username '638eb995da874cca72ec2a17'
-                password 'PEn47V1nFfw4'
-            }
-            url 'https://packages.aliyun.com/maven/repository/2310913-release-J7HQKI/'
+            url('https://packages.aliyun.com/maven/repository/2310913-release-J7HQKI/')
+            credentials({
+                username('638eb995da874cca72ec2a17')
+                password('PEn47V1nFfw4')
+            })
         }
     }
 }

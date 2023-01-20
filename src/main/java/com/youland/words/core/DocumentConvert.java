@@ -27,26 +27,60 @@ import com.spire.doc.documents.Paragraph;
 import com.spire.doc.documents.XHTMLValidationType;
 import com.spire.doc.fields.TextRange;
 import com.youland.words.model.DocumentHtmlAndFooter;
+import org.apache.pdfbox.contentstream.operator.Operator;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSString;
+import org.apache.pdfbox.pdfparser.PDFStreamParser;
+import org.apache.pdfbox.pdfwriter.ContentStreamWriter;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageTree;
+import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.jsoup.Jsoup;
 import org.jsoup.helper.ValidationException;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.CollectionUtils;
+import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class DocumentConvert {
 
-  private static final ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(15, 50, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<>(20), new ThreadPoolExecutor.CallerRunsPolicy());
+  private static final ThreadPoolExecutor threadPoolExecutor =
+      new ThreadPoolExecutor(
+          15,
+          50,
+          10,
+          TimeUnit.SECONDS,
+          new LinkedBlockingQueue<>(20),
+          new ThreadPoolExecutor.CallerRunsPolicy());
 
+  /**
+   * @param is the is html InputStream
+   * @return ByteArrayResource
+   */
+  public static ByteArrayResource generateWord(InputStream is) {
+    Document doc = new Document();
+    doc.loadFromStream(is, FileFormat.Html, XHTMLValidationType.None);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    doc.saveToFile(out, FileFormat.Docx_2013);
+    return removeLogo(new ByteArrayResource(out.toByteArray()));
+  }
   /**
    * generate doc by html.
    *
@@ -56,9 +90,8 @@ public class DocumentConvert {
   public static ByteArrayResource generateWord(String html) {
 
     Document doc = new Document();
-    doc.loadFromStream(new ByteArrayInputStream(html.getBytes()),
-            FileFormat.Html,
-            XHTMLValidationType.None);
+    doc.loadFromStream(
+        new ByteArrayInputStream(html.getBytes()), FileFormat.Html, XHTMLValidationType.None);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     doc.saveToFile(out, FileFormat.Docx_2013);
     return removeLogo(new ByteArrayResource(out.toByteArray()));
@@ -68,30 +101,37 @@ public class DocumentConvert {
    * @param htmlAndFooters word html template
    * @return ByteArrayResource
    */
-  public static ByteArrayResource generateWord(List<DocumentHtmlAndFooter> htmlAndFooters) throws Exception {
+  public static ByteArrayResource generateWord(List<DocumentHtmlAndFooter> htmlAndFooters)
+      throws Exception {
 
     if (CollectionUtils.isEmpty(htmlAndFooters)) {
       throw new ValidationException("No documents");
     }
     // first document
-    CompletableFuture<ByteArrayResource> firstFuture = CompletableFuture.supplyAsync(
+    CompletableFuture<ByteArrayResource> firstFuture =
+        CompletableFuture.supplyAsync(
             () -> {
               DocumentHtmlAndFooter first = htmlAndFooters.get(0);
               ByteArrayOutputStream firstOut = generateWord(first);
-              ByteArrayResource firstResource = removeLogo(new ByteArrayResource(firstOut.toByteArray()));
+              ByteArrayResource firstResource =
+                  removeLogo(new ByteArrayResource(firstOut.toByteArray()));
               return firstResource;
-            }, threadPoolExecutor);
+            },
+            threadPoolExecutor);
     // add other documents
     List<CompletableFuture<ByteArrayResource>> featureList = Lists.newArrayList(firstFuture);
     CompletableFuture[] cfArray = new CompletableFuture[htmlAndFooters.size()];
-    for(int i=1; i<htmlAndFooters.size();i++){
+    for (int i = 1; i < htmlAndFooters.size(); i++) {
       DocumentHtmlAndFooter item = htmlAndFooters.get(i);
-      CompletableFuture<ByteArrayResource> future = CompletableFuture.supplyAsync(
+      CompletableFuture<ByteArrayResource> future =
+          CompletableFuture.supplyAsync(
               () -> {
                 ByteArrayOutputStream pdf = generateWord(item);
-                ByteArrayResource byteArrayResource = removeLogo(new ByteArrayResource(pdf.toByteArray()));
+                ByteArrayResource byteArrayResource =
+                    removeLogo(new ByteArrayResource(pdf.toByteArray()));
                 return byteArrayResource;
-              }, threadPoolExecutor);
+              },
+              threadPoolExecutor);
       featureList.add(future);
     }
     CompletableFuture.allOf(featureList.toArray(cfArray)).join();
@@ -99,7 +139,7 @@ public class DocumentConvert {
     // append documents
     Document document = new Document(firstFuture.get().getInputStream());
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    for (int i=1; i<featureList.size();i++){
+    for (int i = 1; i < featureList.size(); i++) {
       InputStream append = featureList.get(i).get().getInputStream();
       document.insertTextFromStream(append, FileFormat.Docx_2013);
     }
@@ -112,7 +152,8 @@ public class DocumentConvert {
     String htmlContent = docHtmlAndFooter.getDocumentHtml();
     DocumentHtmlAndFooter.Footer docFooter = docHtmlAndFooter.getFooter();
     Document document = new Document();
-    document.loadFromStream(new ByteArrayInputStream(htmlContent.getBytes()),
+    document.loadFromStream(
+        new ByteArrayInputStream(htmlContent.getBytes()),
         FileFormat.Html,
         XHTMLValidationType.None);
     // add footer
@@ -131,7 +172,8 @@ public class DocumentConvert {
     footerParagraph.appendBreak(BreakType.Line_Break);
     TextRange fifth = footerParagraph.appendText("Loan ID: ".concat(docFooter.getLoanId()));
     footerParagraph.appendBreak(BreakType.Line_Break);
-    TextRange sixth = footerParagraph.appendText("Property Address: ".concat(docFooter.getAddress()));
+    TextRange sixth =
+        footerParagraph.appendText("Property Address: ".concat(docFooter.getAddress()));
     first.getCharacterFormat().setFontSize(10f);
     second.getCharacterFormat().setFontSize(10f);
     third.getCharacterFormat().setFontSize(10f);
@@ -146,6 +188,74 @@ public class DocumentConvert {
     document.saveToFile(out, FileFormat.Docx_2013);
 
     return out;
+  }
+
+
+  /**
+   * append docx
+   *
+   * @param src
+   * @param append append
+   * @return
+   */
+  public static ByteArrayResource appendDoc(ByteArrayResource src, ByteArrayResource append) {
+
+    Document document = new Document(new ByteArrayInputStream(src.getByteArray()));
+    document.setKeepSameFormat(false);
+    document.insertTextFromStream(
+            new ByteArrayInputStream(append.getByteArray()), FileFormat.Docx_2013);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    document.saveToFile(out, FileFormat.Docx_2013);
+
+    return removeLogo(new ByteArrayResource(out.toByteArray()));
+  }
+
+  /**
+   *
+   * @param htmlContent html
+   * @return ByteArrayOutputStream pdf
+   */
+  public static ByteArrayOutputStream htmlToPdf(String htmlContent) {
+
+    org.jsoup.nodes.Document document = Jsoup.parse(htmlContent, "UTF-8");
+    document.outputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml);
+    try {
+      // default size: 10 kB
+      ByteArrayOutputStream fileOutputStream = new ByteArrayOutputStream(102400);
+      ITextRenderer renderer = new ITextRenderer();
+      renderer.setDocumentFromString(document.html());
+      renderer.layout();
+      renderer.createPDF(fileOutputStream, false);
+      renderer.finishPDF();
+
+      return fileOutputStream;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * @param docResource word
+   * @return ByteArrayOutputStream pdf
+   */
+  public static ByteArrayOutputStream docxToPdf(ByteArrayResource docResource) {
+    try {
+
+      com.aspose.words.Document document =
+          new com.aspose.words.Document(docResource.getInputStream());
+      PdfSaveOptions options = new PdfSaveOptions();
+      FontSettings fontSettings = FontSettings.getDefaultInstance();
+      fontSettings.setFontsFolder("/usr/share/fonts/", true);
+      document.setFontSettings(fontSettings);
+      PageSet pageSet = new PageSet(new PageRange(0, document.getPageCount()));
+      options.setPageSet(pageSet);
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      document.save(out, options);
+
+      return out;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private static ByteArrayResource removeLogo(ByteArrayResource byteArrayResource) {
@@ -168,27 +278,75 @@ public class DocumentConvert {
     return null;
   }
 
-  /**
-   *
-   * @param docResource word
-   * @return ByteArrayOutputStream pdf
-   */
-  public static ByteArrayOutputStream docToPdf(ByteArrayResource docResource){
-    try{
+  private static void removeText(PDPage page, boolean isFirstPage) throws IOException {
 
-      com.aspose.words.Document document = new com.aspose.words.Document(docResource.getInputStream());
-      PdfSaveOptions options = new PdfSaveOptions();
-      FontSettings fontSettings = FontSettings.getDefaultInstance();
-      fontSettings.setFontsFolder("/usr/share/fonts/",true);
-      document.setFontSettings(fontSettings);
-      PageSet pageSet = new PageSet(new PageRange(0, document.getPageCount()));
-      options.setPageSet(pageSet);
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      document.save(out, options);
+    List<String> firstWaterTexts = Lists.newArrayList();
+    AtomicInteger with = new AtomicInteger(1);
+    PDFStreamParser parser = new PDFStreamParser(page);
+    parser.parse();
+    List<?> tokens = parser.getTokens();
+    for (int j = 0; j < tokens.size(); j++) {
+      Object next = tokens.get(j);
+      if (next instanceof Operator) {
+        Operator op = (Operator) next;
 
-      return out;
-    }catch (Exception e){
+        if (op.getName().equals("Tj") || op.getName().equals("Tj") || "".equals(op.getName())) {
+          COSString previous = (COSString) tokens.get(j - 1);
+          String string = previous.getString();
+          if (string.contains("Spire.Doc")) {
+            previous.setValue("".getBytes());
+          } else if (isFirstPage && firstWaterTexts.stream().anyMatch(e -> string.equals(e))) {
+            if (string.equals(firstWaterTexts.get(6)) && with.get() == 1) {
+              with.incrementAndGet();
+              previous.setValue("".getBytes());
+            } else if (!string.equals(firstWaterTexts.get(6))) {
+              previous.setValue("".getBytes());
+            }
+          }
+        }
+      }
+    }
+    List<PDStream> contents = new ArrayList<>();
+    Iterator<PDStream> streams = page.getContentStreams();
+    while (streams.hasNext()) {
+      PDStream updatedStream = streams.next();
+      OutputStream out = updatedStream.createOutputStream(COSName.FLATE_DECODE);
+      ContentStreamWriter tokenWriter = new ContentStreamWriter(out);
+      tokenWriter.writeTokens(tokens);
+      contents.add(updatedStream);
+      out.close();
+    }
+    page.setContents(contents);
+  }
+
+  private static List<String> getPageCosstring(InputStream inputStream) {
+
+    List<String> costrings = org.apache.commons.compress.utils.Lists.newArrayList();
+    try {
+      PDDocument pdDocument = PDDocument.load(inputStream);
+      PDPageTree pdPageTree = pdDocument.getPages();
+
+      Iterator<PDPage> pageIterator = pdPageTree.iterator();
+      PDFStreamParser parser = new PDFStreamParser(pageIterator.next());
+      parser.parse();
+      List<?> tokens = parser.getTokens();
+      for (int j = 0; j < tokens.size(); j++) {
+        Object next = tokens.get(j);
+        if (next instanceof Operator) {
+          Operator op = (Operator) next;
+
+          if (op.getName().equals("Tj") || op.getName().equals("Tj") || "".equals(op.getName())) {
+            COSString previous = (COSString) tokens.get(j - 1);
+            String string = previous.getString();
+            costrings.add(string);
+          }
+        }
+      }
+      pdDocument.close();
+    } catch (Exception e) {
       throw new RuntimeException(e);
     }
+
+    return costrings;
   }
 }
