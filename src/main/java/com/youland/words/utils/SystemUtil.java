@@ -38,6 +38,6 @@ public class SystemUtil {
     }
 
   public static void main(String[] args) {
-    System.out.println("SystemUtil.main: = "+SystemUtil.getSystemName());
+    System.out.println(String.format("systemName: %s, isLinux: %s",SystemUtil.getSystemName(), isLinux()));
   }
 }

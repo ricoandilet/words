@@ -9,7 +9,7 @@ plugins {
 }
 
 group = 'com.youland'
-version = '1.0.0'
+version = '1.0.3'
 sourceCompatibility = '17'
 
 configurations {
@@ -36,8 +36,8 @@ dependencies {
     // words
     implementation 'org.apache.poi:poi-ooxml:5.2.2'
     implementation 'org.apache.pdfbox:pdfbox:2.0.27'
-    implementation 'e-iceblue:spire.doc:10.12.2'
-    implementation 'com.luhuiguo:aspose-words:22.10'
+    implementation 'com.youland:spiredoc:10.12.3'
+    implementation 'com.youland:aspose-words:22.10'
     implementation "org.xhtmlrenderer:flying-saucer-pdf-itext5:9.1.22"
     implementation 'org.jsoup:jsoup:1.15.3'
     implementation 'com.google.guava:guava:31.1-jre'

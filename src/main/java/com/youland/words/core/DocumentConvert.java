@@ -27,6 +27,7 @@ import com.spire.doc.documents.Paragraph;
 import com.spire.doc.documents.XHTMLValidationType;
 import com.spire.doc.fields.TextRange;
 import com.youland.words.model.DocumentHtmlAndFooter;
+import com.youland.words.utils.SystemUtil;
 import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSString;
@@ -41,6 +42,8 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.jsoup.Jsoup;
 import org.jsoup.helper.ValidationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.CollectionUtils;
 import org.xhtmlrenderer.pdf.ITextRenderer;
@@ -60,6 +63,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DocumentConvert {
+
+  private static Logger logger = LoggerFactory.getLogger(DocumentConvert.class);
 
   private static final ThreadPoolExecutor threadPoolExecutor =
       new ThreadPoolExecutor(
@@ -243,10 +248,14 @@ public class DocumentConvert {
 
       com.aspose.words.Document document =
           new com.aspose.words.Document(docResource.getInputStream());
+
+      logger.warn("SystemName: {}, isLinux：{}.",SystemUtil.getSystemName(), SystemUtil.isLinux());
+      if(SystemUtil.isLinux()){
+        FontSettings fontSettings = FontSettings.getDefaultInstance();
+        fontSettings.setFontsFolder("/usr/share/fonts/", true);
+        document.setFontSettings(fontSettings);
+      }
       PdfSaveOptions options = new PdfSaveOptions();
-      FontSettings fontSettings = FontSettings.getDefaultInstance();
-      fontSettings.setFontsFolder("/usr/share/fonts/", true);
-      document.setFontSettings(fontSettings);
       PageSet pageSet = new PageSet(new PageRange(0, document.getPageCount()));
       options.setPageSet(pageSet);
       ByteArrayOutputStream out = new ByteArrayOutputStream();
