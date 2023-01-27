@@ -68,11 +68,11 @@ public class DocumentConvert {
 
   private static final ThreadPoolExecutor threadPoolExecutor =
       new ThreadPoolExecutor(
-          15,
-          50,
-          10,
+          20,
+          100,
+          60,
           TimeUnit.SECONDS,
-          new LinkedBlockingQueue<>(20),
+          new LinkedBlockingQueue<>(40),
           new ThreadPoolExecutor.CallerRunsPolicy());
 
   /**
