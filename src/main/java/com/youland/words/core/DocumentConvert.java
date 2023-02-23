@@ -169,6 +169,11 @@ public class DocumentConvert {
     Paragraph footerParagraph = footer.addParagraph();
     section.getPageSetup().setRestartPageNumbering(true);
     section.getPageSetup().setPageStartingNumber(1);
+    //set margins
+    section.getPageSetup().getMargins().setTop(36);
+    section.getPageSetup().getMargins().setBottom(72);
+    section.getPageSetup().getMargins().setLeft(36);
+    section.getPageSetup().getMargins().setRight(36);
     // set footer information
     TextRange first = footerParagraph.appendText(docFooter.getTitle().concat(" - Page "));
     TextRange second = footerParagraph.appendField("page number", FieldType.Field_Page);
