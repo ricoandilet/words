@@ -23,6 +23,7 @@ import com.spire.doc.FileFormat;
 import com.spire.doc.HeaderFooter;
 import com.spire.doc.Section;
 import com.spire.doc.documents.BreakType;
+import com.spire.doc.documents.MarginsF;
 import com.spire.doc.documents.Paragraph;
 import com.spire.doc.documents.XHTMLValidationType;
 import com.spire.doc.fields.TextRange;
@@ -117,7 +118,8 @@ public class DocumentConvert {
         CompletableFuture.supplyAsync(
             () -> {
               DocumentHtmlAndFooter first = htmlAndFooters.get(0);
-              ByteArrayOutputStream firstOut = generateWord(first);
+              MarginsF margins = new MarginsF(36, 36, 36, 72);
+              ByteArrayOutputStream firstOut = generateWord(first, margins);
               ByteArrayResource firstResource =
                   removeLogo(new ByteArrayResource(firstOut.toByteArray()));
               return firstResource;
@@ -170,10 +172,10 @@ public class DocumentConvert {
     section.getPageSetup().setRestartPageNumbering(true);
     section.getPageSetup().setPageStartingNumber(1);
     //set margins
-    section.getPageSetup().getMargins().setTop(36);
+    section.getPageSetup().getMargins().setTop(72);
     section.getPageSetup().getMargins().setBottom(72);
-    section.getPageSetup().getMargins().setLeft(36);
-    section.getPageSetup().getMargins().setRight(36);
+    section.getPageSetup().getMargins().setLeft(72);
+    section.getPageSetup().getMargins().setRight(72);
     // set footer information
     TextRange first = footerParagraph.appendText(docFooter.getTitle().concat(" - Page "));
     TextRange second = footerParagraph.appendField("page number", FieldType.Field_Page);
@@ -184,6 +186,54 @@ public class DocumentConvert {
     footerParagraph.appendBreak(BreakType.Line_Break);
     TextRange sixth =
         footerParagraph.appendText("Property Address: ".concat(docFooter.getAddress()));
+    first.getCharacterFormat().setFontSize(10f);
+    second.getCharacterFormat().setFontSize(10f);
+    third.getCharacterFormat().setFontSize(10f);
+    fourth.getCharacterFormat().setFontSize(10f);
+    fifth.getCharacterFormat().setFontSize(10f);
+    first.getCharacterFormat().setFontSize(10f);
+    sixth.getCharacterFormat().setFontSize(10f);
+    // set the location
+    footerParagraph.getFormat().setLeftIndent(-20);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    document.saveToFile(out, FileFormat.Docx_2013);
+
+    return out;
+  }
+
+  private static ByteArrayOutputStream generateWord(DocumentHtmlAndFooter docHtmlAndFooter, MarginsF margins) {
+
+    String htmlContent = docHtmlAndFooter.getDocumentHtml();
+    DocumentHtmlAndFooter.Footer docFooter = docHtmlAndFooter.getFooter();
+    Document document = new Document();
+    document.loadFromStream(
+            new ByteArrayInputStream(htmlContent.getBytes()),
+            FileFormat.Html,
+            XHTMLValidationType.None);
+    // add footer
+    Section section = document.getSections().get(0);
+    section.getPageSetup().setFooterDistance(15f);
+    // get footer
+    HeaderFooter footer = section.getHeadersFooters().getFooter();
+    Paragraph footerParagraph = footer.addParagraph();
+    section.getPageSetup().setRestartPageNumbering(true);
+    section.getPageSetup().setPageStartingNumber(1);
+    //set margins
+    section.getPageSetup().getMargins().setTop(margins.getTop());
+    section.getPageSetup().getMargins().setBottom(margins.getBottom());
+    section.getPageSetup().getMargins().setLeft(margins.getLeft());
+    section.getPageSetup().getMargins().setRight(margins.getRight());
+    // set footer information
+    TextRange first = footerParagraph.appendText(docFooter.getTitle().concat(" - Page "));
+    TextRange second = footerParagraph.appendField("page number", FieldType.Field_Page);
+    TextRange third = footerParagraph.appendText(" of ");
+    TextRange fourth = footerParagraph.appendText(String.valueOf(document.getPageCount()));
+    footerParagraph.appendBreak(BreakType.Line_Break);
+    TextRange fifth = footerParagraph.appendText("Loan ID: ".concat(docFooter.getLoanId()));
+    footerParagraph.appendBreak(BreakType.Line_Break);
+    TextRange sixth =
+            footerParagraph.appendText("Property Address: ".concat(docFooter.getAddress()));
     first.getCharacterFormat().setFontSize(10f);
     second.getCharacterFormat().setFontSize(10f);
     third.getCharacterFormat().setFontSize(10f);
