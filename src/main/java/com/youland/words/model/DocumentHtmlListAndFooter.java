@@ -5,16 +5,17 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @author: rico
  * @date: 2023/1/10
  **/
 @Data
 @Builder
-public class DocumentHtmlAndFooter {
+public class DocumentHtmlListAndFooter {
 
-   private String documentHtml;
+   private List<String> documentHtmlList;
 
    private Footer footer;
-
 }

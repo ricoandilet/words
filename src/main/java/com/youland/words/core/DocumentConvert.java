@@ -28,6 +28,7 @@ import com.spire.doc.documents.Paragraph;
 import com.spire.doc.documents.XHTMLValidationType;
 import com.spire.doc.fields.TextRange;
 import com.youland.words.model.DocumentHtmlAndFooter;
+import com.youland.words.model.DocumentHtmlListAndFooter;
 import com.youland.words.utils.SystemUtil;
 import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.cos.COSName;
@@ -154,15 +155,108 @@ public class DocumentConvert {
     return removeLogo(new ByteArrayResource(out.toByteArray()));
   }
 
-  private static ByteArrayOutputStream generateWord(DocumentHtmlAndFooter docHtmlAndFooter) {
+  /**
+   * generateWord By SubHtml
+   * @param htmlListAndFooters
+   * @return
+   * @throws Exception
+   */
+  public static ByteArrayResource generateWordBySubHtml(List<DocumentHtmlListAndFooter> htmlListAndFooters)
+          throws Exception {
 
-    String htmlContent = docHtmlAndFooter.getDocumentHtml();
-    DocumentHtmlAndFooter.Footer docFooter = docHtmlAndFooter.getFooter();
+    if (CollectionUtils.isEmpty(htmlListAndFooters)) {
+      throw new ValidationException("No documents");
+    }
+    // first document
+    CompletableFuture<ByteArrayResource> firstFuture =
+        CompletableFuture.supplyAsync(
+            () -> {
+              MarginsF margins = new MarginsF(36, 36, 36, 72);
+              ByteArrayResource mainAndSub = null;
+              DocumentHtmlListAndFooter first = htmlListAndFooters.get(0);
+              if (CollectionUtils.isEmpty(first.getDocumentHtmlList())) {
+                throw new ValidationException("No documents");
+              }
+              List<String> htmlList = first.getDocumentHtmlList();
+              var main = generateWord(htmlList.get(0));
+              for (int n = 1; n < htmlList.size(); n++) {
+                var sub = generateWord(htmlList.get(n));
+                mainAndSub = appendDoc(main, sub);
+              }
+
+              var firstResource = generateWord(mainAndSub, first.getFooter(), margins);
+              return removeLogo(new ByteArrayResource(firstResource.toByteArray()));
+            },
+            threadPoolExecutor);
+    // add other documents
+    List<CompletableFuture<ByteArrayResource>> featureList = Lists.newArrayList(firstFuture);
+    CompletableFuture[] cfArray = new CompletableFuture[htmlListAndFooters.size()];
+    for (int i = 1; i < htmlListAndFooters.size(); i++) {
+      DocumentHtmlListAndFooter item = htmlListAndFooters.get(i);
+      CompletableFuture<ByteArrayResource> future =
+              CompletableFuture.supplyAsync(
+                      () -> {
+                        ByteArrayResource mainAndSub = null;
+                        List<String> htmlList = item.getDocumentHtmlList();
+                        Footer footer = item.getFooter();
+                        if (CollectionUtils.isEmpty(htmlList)) {
+                          throw new ValidationException("No documents");
+                        }
+                        var main = generateWord(htmlList.get(0));
+                        for (int n = 1; n < htmlList.size(); n++) {
+                          var sub = generateWord(htmlList.get(n));
+                          mainAndSub = appendDoc(main, sub);
+                        }
+
+                        ByteArrayOutputStream subResource = generateWord(mainAndSub, footer);
+                        return removeLogo(new ByteArrayResource(subResource.toByteArray()));
+                      },
+                      threadPoolExecutor);
+      featureList.add(future);
+    }
+    CompletableFuture.allOf(featureList.toArray(cfArray)).join();
+
+    // append documents
+    Document document = new Document(firstFuture.get().getInputStream());
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    for (int i = 1; i < featureList.size(); i++) {
+      InputStream append = featureList.get(i).get().getInputStream();
+      document.insertTextFromStream(append, FileFormat.Docx_2013);
+    }
+    document.saveToFile(out, FileFormat.Docx_2013);
+    return removeLogo(new ByteArrayResource(out.toByteArray()));
+  }
+
+  /**
+   * default margins
+   * @param docHtmlAndFooter
+   * @return
+   */
+  private static ByteArrayOutputStream generateWord(DocumentHtmlAndFooter docHtmlAndFooter) {
+    MarginsF margins = new MarginsF(72, 72, 72, 72);
+    return generateWord(docHtmlAndFooter, margins);
+  }
+
+  /**
+   * default margins
+   * @param byteArrayResource
+   * @return
+   */
+  private static ByteArrayOutputStream generateWord(ByteArrayResource byteArrayResource, Footer footer) {
+    MarginsF margins = new MarginsF(72, 72, 72, 72);
+    return generateWord(byteArrayResource, footer, margins);
+  }
+
+  /**
+   * custom margins
+   * @param byteArrayResource
+   * @param margins
+   * @return
+   */
+  private static ByteArrayOutputStream generateWord(ByteArrayResource byteArrayResource, Footer docFooter, MarginsF margins) {
+
     Document document = new Document();
-    document.loadFromStream(
-        new ByteArrayInputStream(htmlContent.getBytes()),
-        FileFormat.Html,
-        XHTMLValidationType.None);
+    document.loadFromStream(new ByteArrayInputStream(byteArrayResource.getByteArray()), FileFormat.Docm_2013);
     // add footer
     Section section = document.getSections().get(0);
     section.getPageSetup().setFooterDistance(15f);
@@ -172,10 +266,10 @@ public class DocumentConvert {
     section.getPageSetup().setRestartPageNumbering(true);
     section.getPageSetup().setPageStartingNumber(1);
     //set margins
-    section.getPageSetup().getMargins().setTop(72);
-    section.getPageSetup().getMargins().setBottom(72);
-    section.getPageSetup().getMargins().setLeft(72);
-    section.getPageSetup().getMargins().setRight(72);
+    section.getPageSetup().getMargins().setTop(margins.getTop());
+    section.getPageSetup().getMargins().setBottom(margins.getBottom());
+    section.getPageSetup().getMargins().setLeft(margins.getLeft());
+    section.getPageSetup().getMargins().setRight(margins.getRight());
     // set footer information
     TextRange first = footerParagraph.appendText(docFooter.getTitle().concat(" - Page "));
     TextRange second = footerParagraph.appendField("page number", FieldType.Field_Page);
@@ -185,7 +279,7 @@ public class DocumentConvert {
     TextRange fifth = footerParagraph.appendText("Loan ID: ".concat(docFooter.getLoanId()));
     footerParagraph.appendBreak(BreakType.Line_Break);
     TextRange sixth =
-        footerParagraph.appendText("Property Address: ".concat(docFooter.getAddress()));
+            footerParagraph.appendText("Property Address: ".concat(docFooter.getAddress()));
     first.getCharacterFormat().setFontSize(10f);
     second.getCharacterFormat().setFontSize(10f);
     third.getCharacterFormat().setFontSize(10f);
@@ -202,10 +296,16 @@ public class DocumentConvert {
     return out;
   }
 
+  /**
+   * custom margins
+   * @param docHtmlAndFooter
+   * @param margins
+   * @return
+   */
   private static ByteArrayOutputStream generateWord(DocumentHtmlAndFooter docHtmlAndFooter, MarginsF margins) {
 
     String htmlContent = docHtmlAndFooter.getDocumentHtml();
-    DocumentHtmlAndFooter.Footer docFooter = docHtmlAndFooter.getFooter();
+    Footer docFooter = docHtmlAndFooter.getFooter();
     Document document = new Document();
     document.loadFromStream(
             new ByteArrayInputStream(htmlContent.getBytes()),
