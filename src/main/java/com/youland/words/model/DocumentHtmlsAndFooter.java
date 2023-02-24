@@ -1,7 +1,6 @@
 package com.youland.words.model;
 
 import com.youland.words.core.Footer;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
@@ -13,9 +12,9 @@ import java.util.List;
  **/
 @Data
 @Builder
-public class DocumentHtmlListAndFooter {
+public class DocumentHtmlsAndFooter {
 
-   private List<String> documentHtmlList;
+   private List<String> documentHtmls;
 
    private Footer footer;
 }

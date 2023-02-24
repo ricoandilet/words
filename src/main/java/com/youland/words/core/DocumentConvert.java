@@ -28,7 +28,7 @@ import com.spire.doc.documents.Paragraph;
 import com.spire.doc.documents.XHTMLValidationType;
 import com.spire.doc.fields.TextRange;
 import com.youland.words.model.DocumentHtmlAndFooter;
-import com.youland.words.model.DocumentHtmlListAndFooter;
+import com.youland.words.model.DocumentHtmlsAndFooter;
 import com.youland.words.utils.SystemUtil;
 import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.cos.COSName;
@@ -58,6 +58,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -161,7 +162,7 @@ public class DocumentConvert {
    * @return
    * @throws Exception
    */
-  public static ByteArrayResource generateWordBySubHtml(List<DocumentHtmlListAndFooter> htmlListAndFooters)
+  public static ByteArrayResource generateWordBySubHtml(List<DocumentHtmlsAndFooter> htmlListAndFooters)
           throws Exception {
 
     if (CollectionUtils.isEmpty(htmlListAndFooters)) {
@@ -173,12 +174,13 @@ public class DocumentConvert {
             () -> {
               MarginsF margins = new MarginsF(36, 36, 36, 72);
               ByteArrayResource mainAndSub = null;
-              DocumentHtmlListAndFooter first = htmlListAndFooters.get(0);
-              if (CollectionUtils.isEmpty(first.getDocumentHtmlList())) {
+              DocumentHtmlsAndFooter first = htmlListAndFooters.get(0);
+              if (CollectionUtils.isEmpty(first.getDocumentHtmls())) {
                 throw new ValidationException("No documents");
               }
-              List<String> htmlList = first.getDocumentHtmlList();
+              List<String> htmlList = first.getDocumentHtmls();
               var main = generateWord(htmlList.get(0));
+              mainAndSub = main;
               for (int n = 1; n < htmlList.size(); n++) {
                 var sub = generateWord(htmlList.get(n));
                 mainAndSub = appendDoc(main, sub);
@@ -192,17 +194,18 @@ public class DocumentConvert {
     List<CompletableFuture<ByteArrayResource>> featureList = Lists.newArrayList(firstFuture);
     CompletableFuture[] cfArray = new CompletableFuture[htmlListAndFooters.size()];
     for (int i = 1; i < htmlListAndFooters.size(); i++) {
-      DocumentHtmlListAndFooter item = htmlListAndFooters.get(i);
+      DocumentHtmlsAndFooter item = htmlListAndFooters.get(i);
       CompletableFuture<ByteArrayResource> future =
               CompletableFuture.supplyAsync(
                       () -> {
                         ByteArrayResource mainAndSub = null;
-                        List<String> htmlList = item.getDocumentHtmlList();
+                        List<String> htmlList = item.getDocumentHtmls();
                         Footer footer = item.getFooter();
                         if (CollectionUtils.isEmpty(htmlList)) {
                           throw new ValidationException("No documents");
                         }
                         var main = generateWord(htmlList.get(0));
+                        mainAndSub = main;
                         for (int n = 1; n < htmlList.size(); n++) {
                           var sub = generateWord(htmlList.get(n));
                           mainAndSub = appendDoc(main, sub);
@@ -271,7 +274,7 @@ public class DocumentConvert {
     section.getPageSetup().getMargins().setLeft(margins.getLeft());
     section.getPageSetup().getMargins().setRight(margins.getRight());
     // set footer information
-    TextRange first = footerParagraph.appendText(docFooter.getTitle().concat(" - Page "));
+    TextRange first = footerParagraph.appendText(Optional.ofNullable(docFooter.getTitle()).orElse("").concat(" - Page "));
     TextRange second = footerParagraph.appendField("page number", FieldType.Field_Page);
     TextRange third = footerParagraph.appendText(" of ");
     TextRange fourth = footerParagraph.appendText(String.valueOf(document.getPageCount()));

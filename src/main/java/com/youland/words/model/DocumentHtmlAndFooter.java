@@ -1,7 +1,6 @@
 package com.youland.words.model;
 
 import com.youland.words.core.Footer;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
