@@ -23,7 +23,9 @@ import com.spire.doc.FileFormat;
 import com.spire.doc.HeaderFooter;
 import com.spire.doc.Section;
 import com.spire.doc.documents.BreakType;
+import com.spire.doc.documents.HorizontalAlignment;
 import com.spire.doc.documents.MarginsF;
+import com.spire.doc.documents.PageSize;
 import com.spire.doc.documents.Paragraph;
 import com.spire.doc.documents.XHTMLValidationType;
 import com.spire.doc.fields.TextRange;
@@ -60,6 +62,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -105,25 +108,62 @@ public class DocumentConvert {
     return removeLogo(new ByteArrayResource(out.toByteArray()));
   }
 
-  private static ByteArrayResource generateWordByListHtml(List<String> listHtml, Footer docFooter, MarginsF margins) {
+  private static ByteArrayResource generateWordByListHtml(List<String> listHtml, Footer docFooter, MarginsF margins){
 
     Document document = new Document();
     document.loadFromStream(
             new ByteArrayInputStream(listHtml.get(0).getBytes()), FileFormat.Html, XHTMLValidationType.None);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    // add sub document.
-    for (int i=1; i<listHtml.size(); i++){
-      Document subDoc = new Document();
-      ByteArrayOutputStream subOut = new ByteArrayOutputStream();
-      subDoc.loadFromStream(new ByteArrayInputStream(listHtml.get(i).getBytes()), FileFormat.Html, XHTMLValidationType.None);
-      subDoc.saveToFile(subOut, FileFormat.Docx_2013);
-      ByteArrayResource resource = removeLogo(new ByteArrayResource(subOut.toByteArray()));
-      document.insertTextFromStream(new ByteArrayInputStream(resource.getByteArray()), FileFormat.Docx_2013);
+    try{
+      // add sub document.
+      if (!CollectionUtils.isEmpty(listHtml) && listHtml.size() > 1) {
+
+        for (int i = 1; i < listHtml.size(); i++) {
+          String subHtml = listHtml.get(i);
+          Document subDoc = new Document();
+          ByteArrayOutputStream subOut = new ByteArrayOutputStream();
+          subDoc.loadFromStream(new ByteArrayInputStream(subHtml.getBytes()), FileFormat.Html, XHTMLValidationType.None);
+          subDoc.saveToFile(subOut, FileFormat.Docx_2013);
+          ByteArrayResource resource = removeLogo(new ByteArrayResource(subOut.toByteArray()));
+          InputStream append = resource.getInputStream();
+          document.insertTextFromStream(append, FileFormat.Docx_2013);
+        }
+
+//        List<CompletableFuture<ByteArrayResource>> featureList = Lists.newArrayList();
+//        CompletableFuture[] cfArray = new CompletableFuture[listHtml.size() - 1];
+//        for (int i = 1; i < listHtml.size(); i++) {
+//          String subHtml = listHtml.get(i);
+//          CompletableFuture<ByteArrayResource> future =
+//                  CompletableFuture.supplyAsync(
+//                          () -> {
+//                            Document subDoc = new Document();
+//                            ByteArrayOutputStream subOut = new ByteArrayOutputStream();
+//                            subDoc.loadFromStream(new ByteArrayInputStream(subHtml.getBytes()), FileFormat.Html, XHTMLValidationType.None);
+//                            subDoc.saveToFile(subOut, FileFormat.Docx_2013);
+//                            ByteArrayResource resource =
+//                                    removeLogo(new ByteArrayResource(subOut.toByteArray()));
+//                            return resource;
+//                          },
+//                          threadPoolExecutor);
+//          featureList.add(future);
+//        }
+//        CompletableFuture.allOf(featureList.toArray(cfArray)).join();
+//        // append documents
+//        for (int i = 1; i < featureList.size(); i++) {
+//          InputStream append = featureList.get(i).get().getInputStream();
+//          document.insertTextFromStream(append, FileFormat.Docx_2013);
+//        }
+      }
+
+    }catch (Exception e){
+      logger.error("add subHtml {}.", e);
+      throw new RuntimeException(e);
     }
     // add footer
     Section section = document.getSections().get(0);
-    section.getPageSetup().setFooterDistance(15f);
+    section.getPageSetup().setFooterDistance(14.4f);
+    section.getPageSetup().setPageSize(PageSize.Letter);
     // get footer
     HeaderFooter footer = section.getHeadersFooters().getFooter();
     Paragraph footerParagraph = footer.addParagraph();
@@ -142,8 +182,7 @@ public class DocumentConvert {
     footerParagraph.appendBreak(BreakType.Line_Break);
     TextRange fifth = footerParagraph.appendText("Loan ID: ".concat(docFooter.getLoanId()));
     footerParagraph.appendBreak(BreakType.Line_Break);
-    TextRange sixth =
-            footerParagraph.appendText("Property Address: ".concat(docFooter.getAddress()));
+    TextRange sixth = footerParagraph.appendText("Property Address: ".concat(docFooter.getAddress()));
     first.getCharacterFormat().setFontSize(10f);
     second.getCharacterFormat().setFontSize(10f);
     third.getCharacterFormat().setFontSize(10f);
@@ -152,7 +191,8 @@ public class DocumentConvert {
     first.getCharacterFormat().setFontSize(10f);
     sixth.getCharacterFormat().setFontSize(10f);
     // set the location
-    footerParagraph.getFormat().setLeftIndent(-20);
+    footerParagraph.getFormat().setLeftIndent(-19);
+    footerParagraph.getFormat().setHorizontalAlignment(HorizontalAlignment.Left);
 
     document.saveToFile(out, FileFormat.Docx_2013);
     return removeLogo(new ByteArrayResource(out.toByteArray()));
@@ -292,7 +332,8 @@ public class DocumentConvert {
             XHTMLValidationType.None);
     // add footer
     Section section = document.getSections().get(0);
-    section.getPageSetup().setFooterDistance(15f);
+    section.getPageSetup().setFooterDistance(14.4f);
+    section.getPageSetup().setPageSize(PageSize.Letter);
     // get footer
     HeaderFooter footer = section.getHeadersFooters().getFooter();
     Paragraph footerParagraph = footer.addParagraph();
@@ -321,7 +362,7 @@ public class DocumentConvert {
     first.getCharacterFormat().setFontSize(10f);
     sixth.getCharacterFormat().setFontSize(10f);
     // set the location
-    footerParagraph.getFormat().setLeftIndent(-20);
+    footerParagraph.getFormat().setLeftIndent(-19);
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     document.saveToFile(out, FileFormat.Docx_2013);
