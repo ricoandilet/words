@@ -12,6 +12,7 @@
 */
 package com.youland.words.core;
 
+import com.aspose.words.FileFormatInfo;
 import com.aspose.words.FontSettings;
 import com.aspose.words.PageRange;
 import com.aspose.words.PageSet;
@@ -124,6 +125,9 @@ public class DocumentConvert {
           Document subDoc = new Document();
           ByteArrayOutputStream subOut = new ByteArrayOutputStream();
           subDoc.loadFromStream(new ByteArrayInputStream(subHtml.getBytes()), FileFormat.Html, XHTMLValidationType.None);
+          Section section = subDoc.getSections().get(0);
+          section.getPageSetup().setPageSize(PageSize.Letter);
+          section.getPageSetup().setFooterDistance(14.4f);
           subDoc.saveToFile(subOut, FileFormat.Docx_2013);
           ByteArrayResource resource = removeLogo(new ByteArrayResource(subOut.toByteArray()));
           InputStream append = resource.getInputStream();
@@ -448,7 +452,6 @@ public class DocumentConvert {
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       XWPFDocument doc = new XWPFDocument(OPCPackage.open(byteArrayResource.getInputStream()));
       List<XWPFParagraph> paragraphs = doc.getParagraphs();
-
       if (paragraphs.size() < 1) return byteArrayResource;
       XWPFParagraph firstParagraph = paragraphs.get(0);
       if (firstParagraph.getText().contains("Spire.Doc")) {
