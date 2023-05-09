@@ -12,23 +12,13 @@
 */
 package com.youland.words.core;
 
-import com.aspose.words.FileFormatInfo;
 import com.aspose.words.FontSettings;
 import com.aspose.words.PageRange;
 import com.aspose.words.PageSet;
 import com.aspose.words.PdfSaveOptions;
 import com.google.common.collect.Lists;
-import com.spire.doc.Document;
-import com.spire.doc.FieldType;
-import com.spire.doc.FileFormat;
-import com.spire.doc.HeaderFooter;
-import com.spire.doc.Section;
-import com.spire.doc.documents.BreakType;
-import com.spire.doc.documents.HorizontalAlignment;
-import com.spire.doc.documents.MarginsF;
-import com.spire.doc.documents.PageSize;
-import com.spire.doc.documents.Paragraph;
-import com.spire.doc.documents.XHTMLValidationType;
+import com.spire.doc.*;
+import com.spire.doc.documents.*;
 import com.spire.doc.fields.TextRange;
 import com.youland.words.model.DocumentHtmlAndFooter;
 import com.youland.words.model.DocumentHtmlsAndFooter;
@@ -47,23 +37,16 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.jsoup.Jsoup;
 import org.jsoup.helper.ValidationException;
+import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.CollectionUtils;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
+import java.io.*;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -74,14 +57,15 @@ public class DocumentConvert {
   private static Logger logger = LoggerFactory.getLogger(DocumentConvert.class);
 
   private static final ThreadPoolExecutor threadPoolExecutor =
-      new ThreadPoolExecutor(
-          20,
-          100,
-          60,
-          TimeUnit.SECONDS,
-          new LinkedBlockingQueue<>(40),
-          new ThreadPoolExecutor.CallerRunsPolicy());
+          new ThreadPoolExecutor(
+                  20,
+                  100,
+                  60,
+                  TimeUnit.SECONDS,
+                  new LinkedBlockingQueue<>(40),
+                  new ThreadPoolExecutor.CallerRunsPolicy());
 
+  private static final String  doc_page_break= "YouYu_Words_Document_PageBreak";
   /**
    * @param is the is html InputStream
    * @return ByteArrayResource
@@ -102,8 +86,7 @@ public class DocumentConvert {
   public static ByteArrayResource generateWord(String html) {
 
     Document doc = new Document();
-    doc.loadFromStream(
-        new ByteArrayInputStream(html.getBytes()), FileFormat.Html, XHTMLValidationType.None);
+    doc.loadFromStream(new ByteArrayInputStream(html.getBytes()), FileFormat.Html, XHTMLValidationType.None);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     doc.saveToFile(out, FileFormat.Docx_2013);
     return removeLogo(new ByteArrayResource(out.toByteArray()));
@@ -111,68 +94,33 @@ public class DocumentConvert {
 
   private static ByteArrayResource generateWordByListHtml(List<String> listHtml, Footer docFooter, MarginsF margins){
 
-    Document document = new Document();
-    document.loadFromStream(
-            new ByteArrayInputStream(listHtml.get(0).getBytes()), FileFormat.Html, XHTMLValidationType.None);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-    try{
-      // add sub document.
-      if (!CollectionUtils.isEmpty(listHtml) && listHtml.size() > 1) {
-
-        for (int i = 1; i < listHtml.size(); i++) {
-          String subHtml = listHtml.get(i);
-          Document subDoc = new Document();
-          ByteArrayOutputStream subOut = new ByteArrayOutputStream();
-          subDoc.loadFromStream(new ByteArrayInputStream(subHtml.getBytes()), FileFormat.Html, XHTMLValidationType.None);
-          Section section = subDoc.getSections().get(0);
-          section.getPageSetup().setPageSize(PageSize.Letter);
-          section.getPageSetup().setFooterDistance(14.4f);
-          subDoc.saveToFile(subOut, FileFormat.Docx_2013);
-          ByteArrayResource resource = removeLogo(new ByteArrayResource(subOut.toByteArray()));
-          InputStream append = resource.getInputStream();
-          document.insertTextFromStream(append, FileFormat.Docx_2013);
-        }
-
-//        List<CompletableFuture<ByteArrayResource>> featureList = Lists.newArrayList();
-//        CompletableFuture[] cfArray = new CompletableFuture[listHtml.size() - 1];
-//        for (int i = 1; i < listHtml.size(); i++) {
-//          String subHtml = listHtml.get(i);
-//          CompletableFuture<ByteArrayResource> future =
-//                  CompletableFuture.supplyAsync(
-//                          () -> {
-//                            Document subDoc = new Document();
-//                            ByteArrayOutputStream subOut = new ByteArrayOutputStream();
-//                            subDoc.loadFromStream(new ByteArrayInputStream(subHtml.getBytes()), FileFormat.Html, XHTMLValidationType.None);
-//                            subDoc.saveToFile(subOut, FileFormat.Docx_2013);
-//                            ByteArrayResource resource =
-//                                    removeLogo(new ByteArrayResource(subOut.toByteArray()));
-//                            return resource;
-//                          },
-//                          threadPoolExecutor);
-//          featureList.add(future);
-//        }
-//        CompletableFuture.allOf(featureList.toArray(cfArray)).join();
-//        // append documents
-//        for (int i = 1; i < featureList.size(); i++) {
-//          InputStream append = featureList.get(i).get().getInputStream();
-//          document.insertTextFromStream(append, FileFormat.Docx_2013);
-//        }
+    String docHtml = addPageBreak(listHtml);
+    Document document = new Document();
+    document.loadFromStream(new ByteArrayInputStream(docHtml.getBytes()), FileFormat.Html, XHTMLValidationType.None);
+    TextSelection[] selections = document.findAllString(doc_page_break, true, true);
+    if(Objects.nonNull(selections)&&selections.length>0) {
+      for (TextSelection ts : selections) {
+        TextRange range = ts.getAsOneRange();
+        Paragraph paragraph = range.getOwnerParagraph();
+        int index = paragraph.getChildObjects().indexOf(range);
+        Break pageBreak = new Break(document, BreakType.Page_Break);
+        paragraph.getChildObjects().insert(index + 1, pageBreak);
+        paragraph.replace(doc_page_break, "", true, true);
       }
-
-    }catch (Exception e){
-      logger.error("add subHtml {}.", e);
-      throw new RuntimeException(e);
     }
+
     // add footer
     Section section = document.getSections().get(0);
-    section.getPageSetup().setFooterDistance(14.4f);
+    section.getPageSetup().setFooterDistance(21.6f);
     section.getPageSetup().setPageSize(PageSize.Letter);
     // get footer
     HeaderFooter footer = section.getHeadersFooters().getFooter();
     Paragraph footerParagraph = footer.addParagraph();
     section.getPageSetup().setRestartPageNumbering(true);
     section.getPageSetup().setPageStartingNumber(1);
+
     //set margins
     section.getPageSetup().getMargins().setTop(margins.getTop());
     section.getPageSetup().getMargins().setBottom(margins.getBottom());
@@ -182,7 +130,7 @@ public class DocumentConvert {
     TextRange first = footerParagraph.appendText(Optional.ofNullable(docFooter.getTitle()).orElse("").concat(" - Page "));
     TextRange second = footerParagraph.appendField("page number", FieldType.Field_Page);
     TextRange third = footerParagraph.appendText(" of ");
-    TextRange fourth = footerParagraph.appendText(String.valueOf(document.getPageCount()));
+    TextRange fourth = footerParagraph.appendField("page size", FieldType.Field_Section_Pages);
     footerParagraph.appendBreak(BreakType.Line_Break);
     TextRange fifth = footerParagraph.appendText("Loan ID: ".concat(docFooter.getLoanId()));
     footerParagraph.appendBreak(BreakType.Line_Break);
@@ -197,7 +145,6 @@ public class DocumentConvert {
     // set the location
     footerParagraph.getFormat().setLeftIndent(-19);
     footerParagraph.getFormat().setHorizontalAlignment(HorizontalAlignment.Left);
-
     document.saveToFile(out, FileFormat.Docx_2013);
     return removeLogo(new ByteArrayResource(out.toByteArray()));
   }
@@ -207,37 +154,37 @@ public class DocumentConvert {
    * @return ByteArrayResource
    */
   public static ByteArrayResource generateWord(List<DocumentHtmlAndFooter> htmlAndFooters)
-      throws Exception {
+          throws Exception {
 
     if (CollectionUtils.isEmpty(htmlAndFooters)) {
       throw new ValidationException("No documents");
     }
     // first document
     CompletableFuture<ByteArrayResource> firstFuture =
-        CompletableFuture.supplyAsync(
-            () -> {
-              DocumentHtmlAndFooter first = htmlAndFooters.get(0);
-              MarginsF margins = new MarginsF(36, 36, 36, 72);
-              ByteArrayOutputStream firstOut = generateWord(first, margins);
-              ByteArrayResource firstResource =
-                  removeLogo(new ByteArrayResource(firstOut.toByteArray()));
-              return firstResource;
-            },
-            threadPoolExecutor);
+            CompletableFuture.supplyAsync(
+                    () -> {
+                      DocumentHtmlAndFooter first = htmlAndFooters.get(0);
+                      MarginsF margins = new MarginsF(36, 36, 36, 72);
+                      ByteArrayOutputStream firstOut = generateWord(first, margins);
+                      ByteArrayResource firstResource =
+                              removeLogo(new ByteArrayResource(firstOut.toByteArray()));
+                      return firstResource;
+                    },
+                    threadPoolExecutor);
     // add other documents
     List<CompletableFuture<ByteArrayResource>> featureList = Lists.newArrayList(firstFuture);
     CompletableFuture[] cfArray = new CompletableFuture[htmlAndFooters.size()];
     for (int i = 1; i < htmlAndFooters.size(); i++) {
       DocumentHtmlAndFooter item = htmlAndFooters.get(i);
       CompletableFuture<ByteArrayResource> future =
-          CompletableFuture.supplyAsync(
-              () -> {
-                ByteArrayOutputStream pdf = generateWord(item);
-                ByteArrayResource byteArrayResource =
-                    removeLogo(new ByteArrayResource(pdf.toByteArray()));
-                return byteArrayResource;
-              },
-              threadPoolExecutor);
+              CompletableFuture.supplyAsync(
+                      () -> {
+                        ByteArrayOutputStream pdf = generateWord(item);
+                        ByteArrayResource byteArrayResource =
+                                removeLogo(new ByteArrayResource(pdf.toByteArray()));
+                        return byteArrayResource;
+                      },
+                      threadPoolExecutor);
       featureList.add(future);
     }
     CompletableFuture.allOf(featureList.toArray(cfArray)).join();
@@ -267,16 +214,16 @@ public class DocumentConvert {
     }
     // first document
     CompletableFuture<ByteArrayResource> firstFuture =
-        CompletableFuture.supplyAsync(
-            () -> {
-              MarginsF margins = new MarginsF(36, 36, 36, 72);
-              DocumentHtmlsAndFooter first = htmlListAndFooters.get(0);
-              if (CollectionUtils.isEmpty(first.getDocumentHtmls())) {
-                throw new ValidationException("No documents");
-              }
-              return generateWordByListHtml(first.getDocumentHtmls(), first.getFooter(), margins);
-            },
-            threadPoolExecutor);
+            CompletableFuture.supplyAsync(
+                    () -> {
+                      MarginsF margins = new MarginsF(36, 36, 36, 72);
+                      DocumentHtmlsAndFooter first = htmlListAndFooters.get(0);
+                      if (CollectionUtils.isEmpty(first.getDocumentHtmls())) {
+                        throw new ValidationException("No documents");
+                      }
+                      return generateWordByListHtml(first.getDocumentHtmls(), first.getFooter(), margins);
+                    },
+                    threadPoolExecutor);
     // add other documents
     List<CompletableFuture<ByteArrayResource>> featureList = Lists.newArrayList(firstFuture);
     CompletableFuture[] cfArray = new CompletableFuture[htmlListAndFooters.size()];
@@ -300,6 +247,7 @@ public class DocumentConvert {
 
     // append documents
     Document document = new Document(firstFuture.get().getInputStream());
+    document.setKeepSameFormat(true);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     for (int i = 1; i < featureList.size(); i++) {
       InputStream append = featureList.get(i).get().getInputStream();
@@ -426,7 +374,7 @@ public class DocumentConvert {
     try {
 
       com.aspose.words.Document document =
-          new com.aspose.words.Document(docResource.getInputStream());
+              new com.aspose.words.Document(docResource.getInputStream());
 
       logger.warn("SystemName: {}, isLinux：{}.",SystemUtil.getSystemName(), SystemUtil.isLinux());
       if(SystemUtil.isLinux()){
@@ -535,5 +483,19 @@ public class DocumentConvert {
     }
 
     return costrings;
+  }
+
+  private static String addPageBreak(List<String> htmlList){
+
+    org.jsoup.nodes.Document mainDoc = Jsoup.parse(htmlList.get(0));
+    Element body = mainDoc.body();
+    if (!CollectionUtils.isEmpty(htmlList) && htmlList.size() > 1) {
+      for (int i = 1; i < htmlList.size(); i++) {
+        body.appendText(doc_page_break);
+        org.jsoup.nodes.Document subDoc = Jsoup.parse(htmlList.get(i));
+        body = mainDoc.body().append(subDoc.body().html());
+      }
+    }
+    return mainDoc.html();
   }
 }
