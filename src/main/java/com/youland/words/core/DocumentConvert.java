@@ -149,8 +149,6 @@ public class DocumentConvert {
     return removeLogo(new ByteArrayResource(out.toByteArray()));
   }
 
-  public addFooter
-
   /**
    * @param htmlAndFooters word html template
    * @return ByteArrayResource
