@@ -127,14 +127,14 @@ public class DocumentConvert {
     section.getPageSetup().getMargins().setLeft(margins.getLeft());
     section.getPageSetup().getMargins().setRight(margins.getRight());
     // set footer information
-    TextRange first = footerParagraph.appendText(Optional.ofNullable(docFooter.getTitle()).orElse("").concat(" - Page "));
+    TextRange first = footerParagraph.appendText(Optional.ofNullable(docFooter.getTitle()).map(str-> str.concat(" - ")).orElse("").concat("Page "));
     TextRange second = footerParagraph.appendField("page number", FieldType.Field_Page);
     TextRange third = footerParagraph.appendText(" of ");
     TextRange fourth = footerParagraph.appendField("page size", FieldType.Field_Section_Pages);
     footerParagraph.appendBreak(BreakType.Line_Break);
-    TextRange fifth = footerParagraph.appendText("Loan ID: ".concat(docFooter.getLoanId()));
+    TextRange fifth = footerParagraph.appendText(Optional.ofNullable(docFooter.getLoanId()).map(str-> "Loan ID: ".concat(str)).orElse(""));
     footerParagraph.appendBreak(BreakType.Line_Break);
-    TextRange sixth = footerParagraph.appendText("Property Address: ".concat(docFooter.getAddress()));
+    TextRange sixth = footerParagraph.appendText(Optional.ofNullable(docFooter.getAddress()).map(str->"Property Address: ".concat(str)).orElse(""));
     first.getCharacterFormat().setFontSize(10f);
     second.getCharacterFormat().setFontSize(10f);
     third.getCharacterFormat().setFontSize(10f);
@@ -148,6 +148,8 @@ public class DocumentConvert {
     document.saveToFile(out, FileFormat.Docx_2013);
     return removeLogo(new ByteArrayResource(out.toByteArray()));
   }
+
+  public addFooter
 
   /**
    * @param htmlAndFooters word html template
