@@ -23,6 +23,7 @@ import com.spire.doc.fields.TextRange;
 import com.youland.words.model.DocumentHtmlAndFooter;
 import com.youland.words.model.DocumentHtmlsAndFooter;
 import com.youland.words.utils.SystemUtil;
+import org.apache.logging.log4j.util.Strings;
 import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSString;
@@ -131,10 +132,17 @@ public class DocumentConvert {
     TextRange second = footerParagraph.appendField("page number", FieldType.Field_Page);
     TextRange third = footerParagraph.appendText(" of ");
     TextRange fourth = footerParagraph.appendField("page size", FieldType.Field_Section_Pages);
-    footerParagraph.appendBreak(BreakType.Line_Break);
-    TextRange fifth = footerParagraph.appendText(Optional.ofNullable(docFooter.getLoanId()).map(str-> "Loan ID: ".concat(str)).orElse(""));
-    footerParagraph.appendBreak(BreakType.Line_Break);
-    TextRange sixth = footerParagraph.appendText(Optional.ofNullable(docFooter.getAddress()).map(str->"Property Address: ".concat(str)).orElse(""));
+    String loanId = Optional.ofNullable(docFooter.getLoanId()).map(str-> "Loan ID: ".concat(str)).orElse("");
+    if(Strings.isNotEmpty(loanId)){
+      footerParagraph.appendBreak(BreakType.Line_Break);
+    }
+    TextRange fifth = footerParagraph.appendText(loanId);
+    String address = Optional.ofNullable(docFooter.getAddress()).map(str->"Property Address: ".concat(str)).orElse("");
+    if(Strings.isNotEmpty(address)){
+      footerParagraph.appendBreak(BreakType.Line_Break);
+    }
+    TextRange sixth = footerParagraph.appendText(address);
+
     first.getCharacterFormat().setFontSize(10f);
     second.getCharacterFormat().setFontSize(10f);
     third.getCharacterFormat().setFontSize(10f);
