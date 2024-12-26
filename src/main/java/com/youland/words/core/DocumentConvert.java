@@ -266,6 +266,68 @@ public class DocumentConvert {
   }
 
   /**
+   * generateWord By SubHtml
+   * @param htmlListAndFooters
+   * @return
+   * @throws Exception
+   */
+  public static ByteArrayResource generateWordBySubHtml(List<DocumentHtmlsAndFooter> htmlListAndFooters, List<ByteArrayResource> docs)
+          throws Exception {
+
+    if (CollectionUtils.isEmpty(htmlListAndFooters)) {
+      throw new ValidationException("No documents");
+    }
+    // first document
+    CompletableFuture<ByteArrayResource> firstFuture =
+            CompletableFuture.supplyAsync(
+                    () -> {
+                      MarginsF margins = new MarginsF(36, 36, 36, 72);
+                      DocumentHtmlsAndFooter first = htmlListAndFooters.get(0);
+                      if (CollectionUtils.isEmpty(first.getDocumentHtmls())) {
+                        throw new ValidationException("No documents");
+                      }
+                      return generateWordByListHtml(first.getDocumentHtmls(), first.getFooter(), margins);
+                    },
+                    threadPoolExecutor);
+    // add other documents
+    List<CompletableFuture<ByteArrayResource>> featureList = Lists.newArrayList(firstFuture);
+    CompletableFuture[] cfArray = new CompletableFuture[htmlListAndFooters.size()];
+    for (int i = 1; i < htmlListAndFooters.size(); i++) {
+      DocumentHtmlsAndFooter item = htmlListAndFooters.get(i);
+      CompletableFuture<ByteArrayResource> future =
+              CompletableFuture.supplyAsync(
+                      () -> {
+                        MarginsF margins = new MarginsF(72, 72, 72, 72);
+                        List<String> htmlList = item.getDocumentHtmls();
+                        Footer footer = item.getFooter();
+                        if (CollectionUtils.isEmpty(htmlList)) {
+                          throw new ValidationException("No documents");
+                        }
+                        return generateWordByListHtml(htmlList, footer, margins);
+                      },
+                      threadPoolExecutor);
+      featureList.add(future);
+    }
+    CompletableFuture.allOf(featureList.toArray(cfArray)).join();
+
+    // append documents
+    Document document = new Document(firstFuture.get().getInputStream());
+    document.setKeepSameFormat(true);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    for (int i = 1; i < featureList.size(); i++) {
+      InputStream append = featureList.get(i).get().getInputStream();
+      document.insertTextFromStream(append, FileFormat.Docx_2013);
+    }
+    if(!CollectionUtils.isEmpty(docs)){
+      for (ByteArrayResource doc : docs) {
+        document.insertTextFromStream(doc.getInputStream(), FileFormat.Docx_2013);
+      }
+    }
+    document.saveToFile(out, FileFormat.Docx_2013);
+    return removeLogo(new ByteArrayResource(out.toByteArray()));
+  }
+
+  /**
    * default margins
    * @param docHtmlAndFooter
    * @return
