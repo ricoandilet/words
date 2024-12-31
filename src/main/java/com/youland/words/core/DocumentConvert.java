@@ -413,6 +413,14 @@ public class DocumentConvert {
     return removeLogo(new ByteArrayResource(out.toByteArray()));
   }
 
+  public static boolean appendPageBreak(ByteArrayResource src) {
+    Document document = new Document(new ByteArrayInputStream(src.getByteArray()));
+    Body body = document.getLastSection().getBody();
+    body.getLastParagraph().appendBreak(BreakType.Page_Break);
+    return true;
+  }
+
+
   /**
    *
    * @param htmlContent html
