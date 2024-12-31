@@ -21,7 +21,7 @@ plugins {
 }
 
 group = 'com.youland'
-version = '1.0.10'
+version = '1.0.6-SNAPSHOT'
 sourceCompatibility = JavaVersion.VERSION_11
 
 configurations {
@@ -53,8 +53,8 @@ dependencies {
     // words
     implementation 'org.apache.poi:poi-ooxml:5.2.2'
     implementation 'org.apache.pdfbox:pdfbox:2.0.27'
-    implementation 'com.youland:spiredoc:10.12.3'
-    implementation 'com.youland:aspose-words:22.10'
+    implementation 'com.youland:spiredoc:1.0.6-SNAPSHOT'
+    implementation 'com.youland:aspose-words:1.0.6-SNAPSHOT'
     implementation "org.xhtmlrenderer:flying-saucer-pdf-itext5:9.1.22"
     implementation 'org.jsoup:jsoup:1.15.3'
     implementation 'com.google.guava:guava:31.1-jre'
@@ -202,60 +202,21 @@ project.gradle.taskGraph.whenReady { graph ->
 publishing {
     publications {
         library(MavenPublication) {
-//             groupId 'com.youland'
-//             artifactId 'words'
-//             version "${version}"
-            // Add the artifact produced by the library build
-            //artifact("${buildDir}/obf/words-${version}-plain.jar")
+            groupId 'com.youland'
+            artifactId 'words'
+            version "${version}"
+            artifact("${buildDir}/obf/words-${version}-plain.jar")
             from components.java
-
-//            pom.withXml {
-////                def  dependenciesNode = asNode().appendNode( 'dependencies' )
-////                def dependencyNode = dependenciesNode.appendNode( 'dependency' )
-////                dependencyNode.appendNode( 'groupId','org.apache.poi' )
-////                dependencyNode.appendNode( 'artifactId','poi-ooxml' )
-////                dependencyNode.appendNode( 'version','5.2.2' )
-////
-////                def dependencyNode2 = dependenciesNode.appendNode( 'dependency' )
-////                dependencyNode2.appendNode( 'groupId','org.apache.pdfbox' )
-////                dependencyNode2.appendNode( 'artifactId','pdfbox' )
-////                dependencyNode2.appendNode( 'version','2.0.27' )
-////
-////                def dependencyNode3 = dependenciesNode.appendNode( 'dependency' )
-////                dependencyNode3.appendNode( 'groupId','com.youland' )
-////                dependencyNode3.appendNode( 'artifactId','spiredoc' )
-////                dependencyNode3.appendNode( 'version','10.12.3' )
-////
-////                def dependencyNode4 = dependenciesNode.appendNode( 'dependency' )
-////                dependencyNode4.appendNode( 'groupId','com.youland' )
-////                dependencyNode4.appendNode( 'artifactId','aspose-words' )
-////                dependencyNode4.appendNode( 'version','22.10' )
-////
-////                def dependencyNode5 = dependenciesNode.appendNode( 'dependency' )
-////                dependencyNode5.appendNode( 'groupId','org.xhtmlrenderer' )
-////                dependencyNode5.appendNode( 'artifactId','flying-saucer-pdf-itext5' )
-////                dependencyNode5.appendNode( 'version','9.1.2' )
-////
-////                def dependencyNode6 = dependenciesNode.appendNode( 'dependency' )
-////                dependencyNode6.appendNode( 'groupId','org.jsoup' )
-////                dependencyNode6.appendNode( 'artifactId','jsoup' )
-////                dependencyNode6.appendNode( 'version','1.15.3' )
-////
-////                def dependencyNode7 = dependenciesNode.appendNode( 'dependency' )
-////                dependencyNode7.appendNode( 'groupId','com.google.guava' )
-////                dependencyNode7.appendNode( 'artifactId','guava' )
-////                dependencyNode7.appendNode( 'version','31.1-jre' )
-//            }
         }
     }
     repositories {
-        maven {
-            url('https://packages.aliyun.com/maven/repository/2310913-release-J7HQKI/')
-            credentials({
-                username('638eb995da874cca72ec2a17')
-                password('PEn47V1nFfw4')
-            })
-        }
+//        maven {
+//            url('https://packages.aliyun.com/maven/repository/2310913-release-J7HQKI/')
+//            credentials({
+//                username('638eb995da874cca72ec2a17')
+//                password('PEn47V1nFfw4')
+//            })
+//        }
         maven {
             url('https://packages.aliyun.com/maven/repository/2310913-snapshot-CithX8/')
             credentials({
@@ -265,6 +226,3 @@ publishing {
         }
     }
 }
-
-tasks.publishAllPublicationsToMaven2Repository.dependsOn(proguard)
-tasks.publishAllPublicationsToMavenRepository.dependsOn(proguard)

@@ -401,9 +401,10 @@ public class DocumentConvert {
    * @return
    */
   public static ByteArrayResource appendDoc(ByteArrayResource src, ByteArrayResource append) {
-
     Document document = new Document(new ByteArrayInputStream(src.getByteArray()));
     document.setKeepSameFormat(false);
+    Body body = document.getLastSection().getBody();
+    body.getLastParagraph().appendBreak(BreakType.Page_Break);
     document.insertTextFromStream(
             new ByteArrayInputStream(append.getByteArray()), FileFormat.Docx_2013);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
