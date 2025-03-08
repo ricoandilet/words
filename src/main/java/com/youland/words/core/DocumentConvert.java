@@ -651,9 +651,8 @@ public class DocumentConvert {
             }
         }
 
-        FileOutputStream out = new FileOutputStream("text.docx");
-        //ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         document.saveToFile(out, FileFormat.Docx_2013);
-        return null;
+        return out.toByteArray();
     }
 }
