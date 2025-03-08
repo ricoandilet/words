@@ -12,18 +12,21 @@
 */
 package com.youland.words.core;
 
-import com.aspose.words.FontSettings;
-import com.aspose.words.PageRange;
-import com.aspose.words.PageSet;
-import com.aspose.words.PdfSaveOptions;
+import com.aspose.words.*;
 import com.google.common.collect.Lists;
 import com.spire.doc.*;
-import com.spire.doc.collections.TextBoxCollection;
+import com.spire.doc.Body;
+import com.spire.doc.Document;
+import com.spire.doc.FieldType;
+import com.spire.doc.HeaderFooter;
+import com.spire.doc.Section;
 import com.spire.doc.documents.*;
-import com.spire.doc.fields.CheckBoxFormField;
+import com.spire.doc.documents.BreakType;
+import com.spire.doc.documents.HorizontalAlignment;
+import com.spire.doc.documents.Paragraph;
+import com.spire.doc.documents.SdtType;
+import com.spire.doc.fields.*;
 import com.spire.doc.fields.FormField;
-import com.spire.doc.fields.TextFormField;
-import com.spire.doc.fields.TextRange;
 import com.youland.words.model.DocumentHtmlAndFooter;
 import com.youland.words.model.DocumentHtmlsAndFooter;
 import com.youland.words.utils.SystemUtil;
@@ -46,12 +49,12 @@ import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.util.CollectionUtils;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import java.io.*;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -622,31 +625,32 @@ public class DocumentConvert {
 
     public static byte[] replaceDocument(ReplaceContent replaceContent, InputStream src) throws FileNotFoundException {
         Document document = new Document(src);
-        Map<String,String> textContent = replaceContent.getTextContentList();
-        for(Map.Entry<String,String> entry : textContent.entrySet()){
+        Map<String, String> textContent = replaceContent.getTextContentList();
+        for (Map.Entry<String, String> entry : textContent.entrySet()) {
             document.replace(entry.getKey(), entry.getValue(), false, false);
         }
 
-        if(replaceContent.getCheckBoxContentList().size()>0){
-            Map<String,Boolean> checkBoxContent =  replaceContent.getCheckBoxContentList();
-            for (Section section : (Iterable<Section>) document.getSections()) {
-                // Iterate through all form fields in the section
-                for (FormField field : (Iterable<FormField>) section.getBody().getFormFields()) {
-                    // Check if the field is a checkbox
-                    if (field instanceof CheckBoxFormField) {
-                        CheckBoxFormField checkbox = (CheckBoxFormField) field;
-                        if(checkBoxContent.containsKey(checkbox.getName())){
-                            checkbox.setChecked(checkBoxContent.get(checkbox.getName()));
-                        }
+        Map<String, Boolean> checkBoxContent = replaceContent.getCheckBoxContentList();
+        Map<String, String> textBoxContent = replaceContent.getTextBoxContentList();
+        for (Section section : (Iterable<Section>) document.getSections()) {
+            // Iterate through all form fields in the section
+            for (FormField field : (Iterable<FormField>) section.getBody().getFormFields()) {
+                // Check if the field is a checkbox
+                if (field instanceof CheckBoxFormField) {
+                    CheckBoxFormField checkbox = (CheckBoxFormField) field;
+                    if (checkBoxContent.containsKey(checkbox.getName())) {
+                        checkbox.setChecked(checkBoxContent.get(checkbox.getName()));
                     }
-                    if (field instanceof TextFormField) {
-                        TextFormField textField = (TextFormField) field;
-                        System.out.println("文本输入框名称: " + textField.getName());
-                        System.out.println("文本内容: " + textField.getText());
+                }
+                if (field instanceof TextFormField) {
+                    TextFormField textField = (TextFormField) field;
+                    if (textBoxContent.containsKey(textField.getName())) {
+                        textField.setText(textBoxContent.get(textField.getName()));
                     }
                 }
             }
         }
+
         FileOutputStream out = new FileOutputStream("text.docx");
         //ByteArrayOutputStream out = new ByteArrayOutputStream();
         document.saveToFile(out, FileFormat.Docx_2013);
