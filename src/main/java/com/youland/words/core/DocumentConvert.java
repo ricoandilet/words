@@ -623,7 +623,7 @@ public class DocumentConvert {
         return mainDoc.html();
     }
 
-    public static byte[] replaceDocument(ReplaceContent replaceContent, InputStream src) throws FileNotFoundException {
+    public static ByteArrayResource replaceDocument(ReplaceContent replaceContent, InputStream src) throws FileNotFoundException {
         Document document = new Document(src);
         Map<String, String> textContent = replaceContent.getTextContentList();
         for (Map.Entry<String, String> entry : textContent.entrySet()) {
@@ -653,6 +653,6 @@ public class DocumentConvert {
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         document.saveToFile(out, FileFormat.Docx_2013);
-        return out.toByteArray();
+        return removeLogo(new ByteArrayResource(out.toByteArray()));
     }
 }
