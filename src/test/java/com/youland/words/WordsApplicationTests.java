@@ -6,6 +6,7 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ByteArrayResource;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -33,9 +34,9 @@ class WordsApplicationTests {
         textBoxContent.put("ssn_8", " ");
         textBoxContent.put("ssn_9", "1");
         replaceContent.setTextBoxContentList(textBoxContent);
-        String filePath = "./src/test/data/fw9_v3.docx";
+        String filePath = "./src/test/data/fw9_v31.docx";
         FileInputStream fis = new FileInputStream(filePath);
-        DocumentConvert.replaceDocument(replaceContent, fis);
+        ByteArrayResource byteArrayResource = DocumentConvert.replaceDocument(replaceContent, fis);
 
     }
 

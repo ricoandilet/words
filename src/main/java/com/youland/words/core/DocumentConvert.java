@@ -22,6 +22,7 @@ import com.spire.doc.HeaderFooter;
 import com.spire.doc.Section;
 import com.spire.doc.documents.*;
 import com.spire.doc.documents.BreakType;
+import com.spire.doc.documents.HeaderFooterType;
 import com.spire.doc.documents.HorizontalAlignment;
 import com.spire.doc.documents.Paragraph;
 import com.spire.doc.documents.SdtType;
@@ -449,9 +450,11 @@ public class DocumentConvert {
             Document tempDoc = new Document(new ByteArrayInputStream(byteArrayResource.getByteArray()));
             for (Object sectionObj : tempDoc.getSections()) {
                 Section section = (Section) sectionObj;
-                document.getSections().add(section.deepClone());
+                Section clonedSection = section.deepClone();
+                HeadersFooters headers = clonedSection.getHeadersFooters();
+                headers.setLinkToPrevious(false);
+                document.getSections().add(clonedSection);
             }
-            //document.insertTextFromStream(new ByteArrayInputStream(byteArrayResource.getByteArray()), FileFormat.Docx_2013);
         }
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         document.saveToFile(out, FileFormat.Docx_2013);
@@ -459,6 +462,25 @@ public class DocumentConvert {
         return removeLogo(new ByteArrayResource(out.toByteArray()));
     }
 
+    private static void disableLinkToPrevious(Section section) {
+        HeaderFooter headerFirst = section.getHeadersFooters().getByHeaderFooterType(HeaderFooterType.Header_First_Page);
+        if (headerFirst != null) headerFirst.setLinkToPrevious(false);
+
+        HeaderFooter headerOdd = section.getHeadersFooters().getByHeaderFooterType(HeaderFooterType.Header_Odd);
+        if (headerOdd != null) headerOdd.setLinkToPrevious(false);
+
+        HeaderFooter headerEven = section.getHeadersFooters().getByHeaderFooterType(HeaderFooterType.Header_Even);
+        if (headerEven != null) headerEven.setLinkToPrevious(false);
+
+        HeaderFooter footerFirst = section.getHeadersFooters().getByHeaderFooterType(HeaderFooterType.Footer_First_Page);
+        if (footerFirst != null) footerFirst.setLinkToPrevious(false);
+
+        HeaderFooter footerOdd = section.getHeadersFooters().getByHeaderFooterType(HeaderFooterType.Footer_Odd);
+        if (footerOdd != null) footerOdd.setLinkToPrevious(false);
+
+        HeaderFooter footerEven = section.getHeadersFooters().getByHeaderFooterType(HeaderFooterType.Footer_Even);
+        if (footerEven != null) footerEven.setLinkToPrevious(false);
+    }
     public static boolean appendPageBreak(ByteArrayResource src) {
         Document document = new Document(new ByteArrayInputStream(src.getByteArray()));
         Body body = document.getLastSection().getBody();
