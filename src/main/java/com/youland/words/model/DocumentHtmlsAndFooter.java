@@ -1,6 +1,7 @@
 package com.youland.words.model;
 
 import com.youland.words.core.Footer;
+import com.youland.words.core.Margins;
 import lombok.Builder;
 import lombok.Data;
 
@@ -17,4 +18,6 @@ public class DocumentHtmlsAndFooter {
    private List<String> documentHtmls;
 
    private Footer footer;
+
+   private Margins margins;
 }

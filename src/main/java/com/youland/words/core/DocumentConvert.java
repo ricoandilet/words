@@ -236,11 +236,13 @@ public class DocumentConvert {
         CompletableFuture<ByteArrayResource> firstFuture =
                 CompletableFuture.supplyAsync(
                         () -> {
-                            MarginsF margins = new MarginsF(36, 36, 36, 72);
+                            //MarginsF margins = new MarginsF(36, 36, 36, 72);
                             DocumentHtmlsAndFooter first = htmlListAndFooters.get(0);
                             if (CollectionUtils.isEmpty(first.getDocumentHtmls())) {
                                 throw new ValidationException("No documents");
                             }
+                            Margins margin = first.getMargins();
+                            MarginsF margins = new MarginsF(margin.getLeft(), margin.getTop(), margin.getRight(), margin.getBottom());
                             return generateWordByListHtml(first.getDocumentHtmls(), first.getFooter(), margins);
                         },
                         threadPoolExecutor);
@@ -252,12 +254,14 @@ public class DocumentConvert {
             CompletableFuture<ByteArrayResource> future =
                     CompletableFuture.supplyAsync(
                             () -> {
-                                MarginsF margins = new MarginsF(72, 72, 72, 72);
+                                //MarginsF margins = new MarginsF(72, 72, 72, 72);
                                 List<String> htmlList = item.getDocumentHtmls();
                                 Footer footer = item.getFooter();
                                 if (CollectionUtils.isEmpty(htmlList)) {
                                     throw new ValidationException("No documents");
                                 }
+                                Margins margin = item.getMargins();
+                                MarginsF margins = new MarginsF(margin.getLeft(), margin.getTop(), margin.getRight(), margin.getBottom());
                                 return generateWordByListHtml(htmlList, footer, margins);
                             },
                             threadPoolExecutor);
@@ -294,11 +298,13 @@ public class DocumentConvert {
         CompletableFuture<ByteArrayResource> firstFuture =
                 CompletableFuture.supplyAsync(
                         () -> {
-                            MarginsF margins = new MarginsF(36, 36, 36, 72);
+                            //MarginsF margins = new MarginsF(36, 36, 36, 72);
                             DocumentHtmlsAndFooter first = htmlListAndFooters.get(0);
                             if (CollectionUtils.isEmpty(first.getDocumentHtmls())) {
                                 throw new ValidationException("No documents");
                             }
+                            Margins margin = first.getMargins();
+                            MarginsF margins = new MarginsF(margin.getLeft(), margin.getTop(), margin.getRight(), margin.getBottom());
                             return generateWordByListHtml(first.getDocumentHtmls(), first.getFooter(), margins);
                         },
                         threadPoolExecutor);
@@ -310,12 +316,14 @@ public class DocumentConvert {
             CompletableFuture<ByteArrayResource> future =
                     CompletableFuture.supplyAsync(
                             () -> {
-                                MarginsF margins = new MarginsF(72, 72, 72, 72);
+                                //MarginsF margins = new MarginsF(72, 72, 72, 72);
                                 List<String> htmlList = item.getDocumentHtmls();
                                 Footer footer = item.getFooter();
                                 if (CollectionUtils.isEmpty(htmlList)) {
                                     throw new ValidationException("No documents");
                                 }
+                                Margins margin = item.getMargins();
+                                MarginsF margins = new MarginsF(margin.getLeft(), margin.getTop(), margin.getRight(), margin.getBottom());
                                 return generateWordByListHtml(htmlList, footer, margins);
                             },
                             threadPoolExecutor);
